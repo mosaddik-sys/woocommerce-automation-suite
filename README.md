@@ -2,7 +2,7 @@
 
 A powerful n8n automation system for managing a complete WooCommerce store workflow.
 
-## ✨ Main Features
+##  Main Features
 
 ### Order Processing
 - Triggers on new order placement
@@ -29,7 +29,7 @@ A powerful n8n automation system for managing a complete WooCommerce store workf
 - Uses AI (OpenAI/Gemini) to extract and summarize data
 - Maintains records in Google Sheets
 
-## 🛠️ Technologies Used
+##  Technologies Used
 
 - **n8n** Workflow Automation
 - **WooCommerce API**
