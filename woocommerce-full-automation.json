@@ -1,0 +1,2444 @@
+{
+  "name": "WooCommerce",
+  "nodes": [
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"invoice_no\": \"105\",\n  \"subtotal\": \"25500.00\",\n  \"tax\": \"0.00\",\n  \"products\": [\n    {\n      \"product_name\": \"27-inch 4K Monitor\",\n      \"sku\": \"3\",\n      \"quantity\": 1\n    }\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -2624,
+        816
+      ],
+      "id": "0ef83c36-862b-4183-b85d-742fbb1e92d2",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "event": "order.created"
+      },
+      "type": "n8n-nodes-base.wooCommerceTrigger",
+      "typeVersion": 1,
+      "position": [
+        -3840,
+        -368
+      ],
+      "id": "1e0bdc62-b115-4d72-a72d-10b9c0f4e6ea",
+      "name": "ORDER PLACED TRIGGER",
+      "webhookId": "e4d4f801-9983-42b6-96af-afaedd580cb6",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const order = $input.first().json;\n\nconst shopName = \"NovaStore\";\nconst invoiceNo = order.number;\nconst orderDate = new Date(order.date_created).toLocaleString();\nconst paymentMethod = order.payment_method_title;\n\nconst currencyCode = order.currency || \"BDT\";\n\nconst billing = order.billing;\nconst shipping = order.shipping;\n\nlet itemsHtml = '';\norder.line_items.forEach(item => {\n  itemsHtml += `\n    <tr>\n      <td style=\"padding: 12px; border-bottom: 1px solid #eee;\">\n        ${item.name} <br>\n        <span style=\"color: #888; font-size: 12px;\">SKU: ${item.sku}</span>\n      </td>\n      <td style=\"padding: 12px; border-bottom: 1px solid #eee; text-align: center;\">${item.quantity}</td>\n      <td style=\"padding: 12px; border-bottom: 1px solid #eee; text-align: right;\">${parseFloat(item.price).toFixed(2)} ${currencyCode}</td>\n      <td style=\"padding: 12px; border-bottom: 1px solid #eee; text-align: right; font-weight: 500;\">${parseFloat(item.total).toFixed(2)} ${currencyCode}</td>\n    </tr>\n  `;\n});\n\nconst totalTax = parseFloat(order.total_tax || 0);\nconst discountTotal = parseFloat(order.discount_total || 0);\nconst shippingTotal = parseFloat(order.shipping_total || 0);\nconst grandTotal = parseFloat(order.total);\n\nconst subTotal = grandTotal - shippingTotal - totalTax;\n\nlet taxRowHtml = '';\nif (totalTax > 0) {\n  taxRowHtml = `\n    <div class=\"totals-row\">\n      <span>Tax:</span>\n      <span>${totalTax.toFixed(2)} ${currencyCode}</span>\n    </div>\n  `;\n}\n\nlet discountRowHtml = '';\nif (discountTotal > 0) {\n  discountRowHtml = `\n    <div class=\"totals-row\" style=\"color: #e74c3c;\">\n      <span>Discount:</span>\n      <span> - ${discountTotal.toFixed(2)} ${currencyCode}</span>\n    </div>\n  `;\n}\n\n\nconst htmlTemplate = `\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <style>\n    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 40px; background-color: #f9f9f9; }\n    .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.05); border-top: 6px solid #4A90E2; }\n    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }\n    .shop-name { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0; }\n    .invoice-title { font-size: 24px; color: #7f8c8d; margin: 0; text-transform: uppercase; letter-spacing: 2px; }\n    .invoice-meta { margin-top: 20px; font-size: 14px; color: #555; }\n    .invoice-meta strong { color: #2c3e50; }\n    \n    .customer-section { display: flex; justify-content: space-between; margin-bottom: 40px; }\n    .section-box { width: 48%; }\n    .section-title { font-size: 14px; font-weight: bold; color: #4A90E2; text-transform: uppercase; margin-bottom: 10px; border-bottom: 2px solid #eee; padding-bottom: 5px; }\n    .section-content { font-size: 14px; line-height: 1.6; color: #555; }\n    \n    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }\n    th { background-color: #f8f9fa; padding: 12px; text-align: left; font-size: 13px; color: #666; border-bottom: 2px solid #ddd; text-transform: uppercase; }\n    th:last-child, td:last-child { text-align: right; }\n    th:nth-child(2), td:nth-child(2) { text-align: center; }\n    \n    .totals-section { width: 50%; margin-left: auto; font-size: 14px; }\n    .totals-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; }\n    .grand-total { font-size: 18px; font-weight: bold; color: #2c3e50; border-bottom: none; margin-top: 10px; padding-top: 10px; border-top: 2px solid #333; }\n    \n    .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    \n    <!-- Header Section -->\n    <div class=\"header\">\n      <div>\n        <h1 class=\"shop-name\">${shopName}</h1>\n        <p style=\"color: #777; margin: 5px 0 0 0;\">Dhaka, Bangladesh</p>\n        <p style=\"color: #777; margin: 5px 0 0 0;\">Email: support@novastore.com</p>\n      </div>\n      <div style=\"text-align: right;\">\n        <h2 class=\"invoice-title\">Invoice</h2>\n        <div class=\"invoice-meta\">\n          <strong>Invoice #:</strong> ${invoiceNo}<br>\n          <strong>Date:</strong> ${orderDate}<br>\n          <strong>Payment:</strong> ${paymentMethod}\n        </div>\n      </div>\n    </div>\n\n    <!-- Customer Info Section -->\n    <div class=\"customer-section\">\n      <div class=\"section-box\">\n        <div class=\"section-title\">Bill To</div>\n        <div class=\"section-content\">\n          <strong>${billing.first_name} ${billing.last_name}</strong><br>\n          ${billing.address_1}<br>\n          ${billing.city}, ${billing.state}<br>\n          ${billing.country}<br>\n          Phone: ${billing.phone}<br>\n          Email: ${billing.email}\n        </div>\n      </div>\n      <div class=\"section-box\">\n        <div class=\"section-title\">Ship To</div>\n        <div class=\"section-content\">\n          <strong>${shipping.first_name} ${shipping.last_name}</strong><br>\n          ${shipping.address_1}<br>\n          ${shipping.city}, ${shipping.state}<br>\n          ${shipping.country}<br>\n          Phone: ${shipping.phone}\n        </div>\n      </div>\n    </div>\n\n    <!-- Items Table -->\n    <table>\n      <thead>\n        <tr>\n          <th>Product Description</th>\n          <th>Qty</th>\n          <th>Unit Price</th>\n          <th>Total</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${itemsHtml}\n      </tbody>\n    </table>\n\n    <!-- Totals Section -->\n    <div class=\"totals-section\">\n      <div class=\"totals-row\">\n        <span>Subtotal:</span>\n        <span>${subTotal.toFixed(2)} ${currencyCode}</span>\n      </div>\n      \n      ${discountRowHtml}\n      \n      <div class=\"totals-row\">\n        <span>Shipping:</span>\n        <span>${shippingTotal.toFixed(2)} ${currencyCode}</span>\n      </div>\n      \n      ${taxRowHtml}\n      \n      <div class=\"totals-row grand-total\">\n        <span>Grand Total:</span>\n        <span>${grandTotal.toFixed(2)} ${currencyCode}</span>\n      </div>\n    </div>\n\n    <!-- Footer -->\n    <div class=\"footer\">\n      <p>Thank you for your purchase from ${shopName}!</p>\n      <p>This is a computer-generated invoice and does not require a physical signature.</p>\n    </div>\n\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    invoice_html: htmlTemplate,\n    order_id: invoiceNo,\n    customer_name: `${billing.first_name} ${billing.last_name}`\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3616,
+        -272
+      ],
+      "id": "7831c2ab-427d-4199-a396-3c5446acfc2f",
+      "name": "GMAIL TEMPLATE"
+    },
+    {
+      "parameters": {
+        "resource": "conversion",
+        "htmlContent": "={{ $json.invoice_html }}",
+        "conversionOptions": {
+          "conversionOutput": "file"
+        }
+      },
+      "type": "@pdfgeneratorapi/n8n-nodes-pdf-generator-api.pdfGeneratorApi",
+      "typeVersion": 1,
+      "position": [
+        -3392,
+        -272
+      ],
+      "id": "5105a199-8876-4d71-bfb1-262d0deb4b57",
+      "name": "HTML TO PDF",
+      "credentials": {
+        "pdfGeneratorApi": {
+          "id": "hFNO8QdDhhrdv1WM",
+          "name": "PDF Generator account 15"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('ORDER PLACED TRIGGER').item.json.billing.email }}",
+        "subject": "=Your Invoice for Order #{{ $('GMAIL TEMPLATE').item.json.order_id }} from NovaStore",
+        "emailType": "text",
+        "message": "=Dear {{ $('GMAIL TEMPLATE').item.json.customer_name }},\n\nThank you for shopping with NovaStore! We have successfully received your order #{{ $('GMAIL TEMPLATE').item.json.order_id }}.\n\nPlease find your detailed invoice attached to this email in PDF format. You can keep this document for your records and future reference.\n\nIf you have any questions about your order, payment, or delivery, feel free to reply to this email or contact our support team. We are always here to help!\n\nThank you for choosing NovaStore. We hope to serve you again soon!\n\nBest regards,\nThe NovaStore Team\nsupport@novastore.com",
+        "options": {
+          "appendAttribution": false,
+          "attachmentsUi": {
+            "attachmentsBinary": [
+              {
+                "property": "document.pdf"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -3168,
+        -272
+      ],
+      "id": "50f50ed5-22b1-489a-b89e-cd9595058a0d",
+      "name": "INVOICE SENT",
+      "webhookId": "e2c25d39-544f-462d-af4a-debc5913445a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qix6qoyJkHPH0uNI",
+          "name": "Gmail account 710"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cddfb5f2-be25-497e-9407-977f9e6dc127",
+              "name": "sku",
+              "value": "={{ $('ORDER PLACED TRIGGER').item.json.line_items[0].sku }}",
+              "type": "string"
+            },
+            {
+              "id": "a3fcc77b-5699-4a0b-8e6a-b1f853b45030",
+              "name": "order quantity",
+              "value": "={{ $('ORDER PLACED TRIGGER').item.json.line_items[0].quantity }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3616,
+        -464
+      ],
+      "id": "8fa0702e-825d-4f52-aa8c-800391ad7206",
+      "name": "SKU AND ORDER QUANTITY"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "SKU",
+              "lookupValue": "={{ $json.sku }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3392,
+        -464
+      ],
+      "id": "9e6c9d11-f279-48ce-b44d-5f99265efc99",
+      "name": "GET PRODUCTS",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "99ee7410-b27b-4449-a4ea-a47d7ff2d139",
+              "name": "new quantity",
+              "value": "={{ $json['Stock Quantity']- $('SKU AND ORDER QUANTITY').item.json['order quantity']}}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3168,
+        -464
+      ],
+      "id": "7791d9c4-6500-410a-ab53-163719c95c31",
+      "name": "CALCULATE NEW QUANTITY"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d63aa1cd-d92d-4935-99d4-d4b11e7795c2",
+              "leftValue": "={{ $json['new quantity'] }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2944,
+        -464
+      ],
+      "id": "bcd4c2c7-a9a5-49f7-a866-64ef78bff108",
+      "name": "STOCK OUT OR NOT"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SKU": "={{ $('SKU AND ORDER QUANTITY').item.json.sku }}",
+            "Stock Quantity": "={{ $('CALCULATE NEW QUANTITY').item.json['new quantity'] }}",
+            "Stock Status": "Out Of Stock"
+          },
+          "matchingColumns": [
+            "SKU"
+          ],
+          "schema": [
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Short Description",
+              "displayName": "Short Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Regular Price",
+              "displayName": "Regular Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sale Price",
+              "displayName": "Sale Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stock Quantity",
+              "displayName": "Stock Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stock Status",
+              "displayName": "Stock Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2720,
+        -576
+      ],
+      "id": "a013b67f-5bea-42bf-83e4-4eaded7687d4",
+      "name": "UPDATE TO STOCK OUT",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "SKU": "={{ $('ORDER PLACED TRIGGER').item.json.line_items[0].sku }}",
+            "Stock Quantity": "={{ $json['new quantity'] }}"
+          },
+          "matchingColumns": [
+            "SKU"
+          ],
+          "schema": [
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Short Description",
+              "displayName": "Short Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Regular Price",
+              "displayName": "Regular Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sale Price",
+              "displayName": "Sale Price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stock Quantity",
+              "displayName": "Stock Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stock Status",
+              "displayName": "Stock Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2720,
+        -368
+      ],
+      "id": "5da1cefa-2c17-4604-91d8-64e0b87ec551",
+      "name": "UPDATE QUANTITY",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ $('ORDER PLACED TRIGGER').item.json.line_items[0].product_id }}",
+        "updateFields": {
+          "stockQuantity": "={{ $('CALCULATE NEW QUANTITY').item.json['new quantity'] }}",
+          "stockStatus": "outofstock"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {},
+        "metadataUi": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        -576
+      ],
+      "id": "454cd9f0-5c02-42f7-b61a-3f44d5f6529c",
+      "name": "UPDATE TO STOCK OUT1",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ $('ORDER PLACED TRIGGER').item.json.line_items[0].product_id }}",
+        "updateFields": {
+          "stockQuantity": "={{ $json['new quantity'] }}"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {},
+        "metadataUi": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -2496,
+        -368
+      ],
+      "id": "de0374e1-8bbc-40c1-9946-f3a585bcc713",
+      "name": "UPDATE QUANTITY1",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -6416,
+        -448
+      ],
+      "id": "3dd9183a-02ba-4994-85d2-79475ca8985f",
+      "name": "GET PRODUCTS1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -6416,
+        -256
+      ],
+      "id": "43979325-1613-4fa7-be60-2e3449d0defe",
+      "name": "GET PRODUCTS2",
+      "executeOnce": true,
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6b7b018a-4f7c-42e9-95ad-8dfcb93273f2",
+              "name": "SKU",
+              "value": "={{ $json.SKU }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6192,
+        -448
+      ],
+      "id": "239e8be6-8563-4b70-9ab2-ff121d639828",
+      "name": "SKU"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bbc9b5b7-c1d4-4c9c-94d6-c7da7333cd7e",
+              "name": "sku",
+              "value": "={{ $json.sku }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -6192,
+        -256
+      ],
+      "id": "f8dfbb44-d828-4818-beb4-0a8f99c973d5",
+      "name": "SKU1"
+    },
+    {
+      "parameters": {
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "SKU",
+              "field2": "sku"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.compareDatasets",
+      "typeVersion": 2.3,
+      "position": [
+        -5968,
+        -384
+      ],
+      "id": "ffef4ec4-56c5-4ca0-8eb3-19a37b875a83",
+      "name": "COMPARE PRODUCTS"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -5696,
+        -112
+      ],
+      "id": "66f994e5-19bb-40a1-b557-d79c5e8ad13d",
+      "name": "GET PRODUCTS3",
+      "executeOnce": true,
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "720fca7a-1b8d-4dbb-8673-ffbc249c5787",
+              "leftValue": "={{ $('COMPARE PRODUCTS').item.json.sku }}",
+              "rightValue": "={{ $json.sku }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -5472,
+        -112
+      ],
+      "id": "ddcbbf65-2dbd-4134-ae6a-d796bfffceba",
+      "name": "FILTER UNAVAILABE PRODUCTS DATA"
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "productId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -5248,
+        -112
+      ],
+      "id": "d5b1ae4d-0d95-4621-bde7-f0e1782a652d",
+      "name": "DELET UNAVAILABLE PRODUCTS",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -5696,
+        -592
+      ],
+      "id": "2527277f-a6da-4d39-b56b-1743e369cb1e",
+      "name": "GET PRODUCTS4",
+      "executeOnce": false,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1ef9cb7f-33a3-4a0e-b038-6878f0e75c4a",
+              "leftValue": "={{ $('COMPARE PRODUCTS').item.json.SKU }}",
+              "rightValue": "={{ $json.SKU }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -5472,
+        -592
+      ],
+      "id": "b96dc11a-5d4f-4ebd-8cc5-b4c927d42621",
+      "name": "FILTER MATCHING SKU"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "50180072-b777-460c-bd95-2a79842a8dc6",
+              "name": "SKU",
+              "value": "={{ $json.SKU }}",
+              "type": "string"
+            },
+            {
+              "id": "83e644aa-1650-4ab9-a54b-52abf6916fa6",
+              "name": "Name",
+              "value": "={{ $json.Name }}",
+              "type": "string"
+            },
+            {
+              "id": "324d6a98-1a7e-4b3c-b8e6-8608a8d98681",
+              "name": "Description",
+              "value": "={{ $json.Description }}",
+              "type": "string"
+            },
+            {
+              "id": "f7680972-e66a-4ca7-8324-a0a1ccf5aefb",
+              "name": "Short Description",
+              "value": "={{ $json['Short Description'] }}",
+              "type": "string"
+            },
+            {
+              "id": "942c4a2a-458f-4fe0-913c-cf93ca8d6b02",
+              "name": "Regular Price",
+              "value": "={{ $json['Regular Price'] }}",
+              "type": "string"
+            },
+            {
+              "id": "ff2598e0-e6ff-4150-bd9f-fb782e19b6fe",
+              "name": "Sale Price",
+              "value": "={{ $json['Sale Price'] }}",
+              "type": "string"
+            },
+            {
+              "id": "99acde0b-6a52-42c5-bb97-5471e3e088b5",
+              "name": "Stock Quantity",
+              "value": "={{ $json['Stock Quantity'] }}",
+              "type": "string"
+            },
+            {
+              "id": "3029157e-a992-485c-8208-afe56ab92af2",
+              "name": "Stock Status",
+              "value": "={{ $json['Stock Status'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -5248,
+        -592
+      ],
+      "id": "2bc01153-7fa1-4429-9e22-f05a7f8d91c8",
+      "name": "NECCESSARY DATA"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4.1-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=You are an expert e-commerce product description writer. \nI will provide you with the Product Name, its existing Short Description, and the current Description.\n\nYour tasks:\n1. Use the Tavily Search tool to search the internet for detailed features, specifications, and real-world benefits about this product (based on the product name).\n2. Combine the given \"Short Description\" and \"Current Description\" with the information found via Tavily.\n3. Write a detailed, SEO-friendly, and compelling \"Enhanced Long Description\" (at least 150 words). \n4. The description must be well-structured with HTML paragraphs (<p>), bullet points (<ul><li>), and bold (<b>) for key features.\n\nOutput Format: Return ONLY the generated HTML description. Do not add any extra text, intro, or conclusion.\n\nHere is the product information:\n- Product Name: {{ $json.Name }}\n- Short Description: {{ $json[\"Short Description\"] }}\n- Current Description: {{ $json.Description }}"
+            }
+          ]
+        },
+        "builtInTools": {
+          "webSearch": {
+            "searchContextSize": "high"
+          }
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        -5024,
+        -704
+      ],
+      "id": "d557b740-bb1e-4a37-b966-61568d1ed9ee",
+      "name": "DESCRIPTION ENHANCER",
+      "credentials": {
+        "openAiApi": {
+          "id": "gbX2dpZS4ar77nku",
+          "name": "OpenAI account 424"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "create",
+        "name": "={{ $('NECCESSARY DATA').item.json.Name }}",
+        "additionalFields": {
+          "description": "={{ $('DESCRIPTION ENHANCER').item.json.output[0].content[0].text }}",
+          "regularPrice": "={{ $('NECCESSARY DATA').item.json['Regular Price'] }}",
+          "salePrice": "={{ $('NECCESSARY DATA').item.json['Sale Price'] }}",
+          "shortDescription": "={{ $('NECCESSARY DATA').item.json['Short Description'] }}",
+          "sku": "={{ $('NECCESSARY DATA').item.json.SKU }}",
+          "stockQuantity": "={{ $('NECCESSARY DATA').item.json['Stock Quantity'] }}"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {
+          "imagesValues": [
+            {
+              "alt": "={{ $('NECCESSARY DATA').item.json.Name }}",
+              "src": "={{ $json.url }}",
+              "name": "={{ $('NECCESSARY DATA').item.json.Name }}"
+            }
+          ]
+        },
+        "metadataUi": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -4432,
+        -592
+      ],
+      "id": "d233ebe3-50c5-434a-8fe1-91846c26cf32",
+      "name": "CREAT PRODUCT",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "asset",
+        "operation": "search",
+        "searchExpression": "={{ $('NECCESSARY DATA').item.json.SKU }}",
+        "searchReturnAll": true,
+        "searchAdditionalFields": {}
+      },
+      "type": "n8n-nodes-cloudinary.cloudinary",
+      "typeVersion": 1,
+      "position": [
+        -4672,
+        -592
+      ],
+      "id": "3c8a6ac7-5b0b-46ce-8ef3-9e373f51795d",
+      "name": "GET PRODUCT IMAGE URLS",
+      "credentials": {
+        "cloudinaryApi": {
+          "id": "ww5EWaLQPr3zXqjz",
+          "name": "Cloudinary account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "query": "={{ $json.Name }} product features specifications review",
+        "options": {}
+      },
+      "type": "@tavily/n8n-nodes-tavily.tavilyTool",
+      "typeVersion": 1,
+      "position": [
+        -4880,
+        -528
+      ],
+      "id": "28859603-babe-4b01-a81d-cf6563c04942",
+      "name": "COLLECT PRODUCT DETAIL",
+      "credentials": {
+        "tavilyApi": {
+          "id": "NaQnAiKEeInk7WnQ",
+          "name": "Tavily account 297"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -3920,
+        592
+      ],
+      "id": "8fb1bcd3-c2d3-496d-bb81-1923f08329ee",
+      "name": "TRIGGER EVERY HOUR"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "SENT"
+          ],
+          "q": "subject:invoice has:attachment subject:NovaStore"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -3904,
+        848
+      ],
+      "id": "3c2fbd09-003c-430c-b2c0-7de0763133ad",
+      "name": "GET SENT INVOICE THREADS",
+      "webhookId": "34cc60bd-dc76-40d4-aa8c-d58ae90c6438",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qix6qoyJkHPH0uNI",
+          "name": "Gmail account 710"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "attachment_0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -3472,
+        592
+      ],
+      "id": "65e8e867-6778-48a3-bc64-6a929ad01d57",
+      "name": "EXTRACT INVOICE"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1274042948,
+          "mode": "list",
+          "cachedResultName": "sales summery",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=1274042948"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -3488,
+        832
+      ],
+      "id": "b3b3c45d-326d-442f-9a2c-48530b7dd648",
+      "name": "GET SALES SUMMERY",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "ef8d8fa1-97dd-489d-afcc-23b709ae22a8",
+              "leftValue": "={{ $json.threadid }}",
+              "rightValue": "={{ $('GET SENT INVOICE THREADS').item.json.threadId }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -3136,
+        592
+      ],
+      "id": "f8b9997b-e060-40ca-bc0c-da96ae37e959",
+      "name": "FILTER OUT PREVIOUST PROCCESSED INVOICES"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=this is extracted pdf: {{ $('EXTRACT INVOICE').item.json.text }}",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "=You are an expert data extraction assistant for an e-commerce store.\nYour task is to analyze the provided WooCommerce invoice/order JSON data and extract specific fields accurately.\n\nYou must extract the following information:\n1. Invoice Number (Order Number).\n2. Subtotal (The total price of all items before shipping, tax, and discounts).\n3. Tax (The total tax amount for the order).\n4. A list of all products purchased in this order. For each product, extract:\n   - Product Name\n   - SKU\n   - Quantity\n\nIf a field is missing in the JSON, return \"0\" for numbers and \"N/A\" for strings. \nYou must strictly output the result using the Structured Output Parser tool provided to you. Do not include any conversational text, only the structured data."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -2880,
+        592
+      ],
+      "id": "43f76073-9052-4c13-bc3b-c59d0e04260d",
+      "name": "SUMMERY GENERATOR"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -2960,
+        816
+      ],
+      "id": "f8ad5e28-5d57-4671-bdd3-065dbeb378c7",
+      "name": "OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "gbX2dpZS4ar77nku",
+          "name": "OpenAI account 424"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -2784,
+        816
+      ],
+      "id": "143caa57-c3a1-469b-aa45-e726b4712950",
+      "name": "Google Gemini",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "7ii6dCHzPX1rdg3A",
+          "name": "Google Gemini(PaLM) Api account 1361"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1274042948,
+          "mode": "list",
+          "cachedResultName": "sales summery",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=1274042948"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "INVOICE NUMER": "={{ $json.output['Invoice Number'] }}",
+            "SKU": "={{ $json.output.Products[0].SKU }}",
+            "NAME": "={{ $json.output.Products[0]['Product Name'] }}",
+            "SALE": "={{ $json.output.Subtotal }}",
+            "TAX": "={{ $json.output.Tax }}",
+            "QUANTITY": "={{ $json.output.Products[0].Quantity }}",
+            "THREAD ID": "={{ $('GET SENT INVOICE THREADS').item.json.threadId }}"
+          },
+          "matchingColumns": [
+            "threadid"
+          ],
+          "schema": [
+            {
+              "id": "INVOICE NUMER",
+              "displayName": "INVOICE NUMER",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SKU",
+              "displayName": "SKU",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "NAME",
+              "displayName": "NAME",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "SALE",
+              "displayName": "SALE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TAX",
+              "displayName": "TAX",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "QUANTITY",
+              "displayName": "QUANTITY",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "THREAD ID",
+              "displayName": "THREAD ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TOTAL SALE",
+              "displayName": "TOTAL SALE",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TOTAL TAX",
+              "displayName": "TOTAL TAX",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "TOTAL ITEM",
+              "displayName": "TOTAL ITEM",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2448,
+        592
+      ],
+      "id": "16db73c3-4c07-4e8d-8993-9bea070891e6",
+      "name": "ADD NEW INVOICE SUMMERY",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -6240,
+        624
+      ],
+      "id": "ea667ca5-f2e1-4db1-88eb-5ed710282010",
+      "name": "TRIGGER EVERYDAY"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1274042948,
+          "mode": "list",
+          "cachedResultName": "sales summery",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=1274042948"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -6016,
+        624
+      ],
+      "id": "87e14e5b-c290-4fc4-8001-5236c7f90426",
+      "name": "GET SALES SUMMERY1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "510f894a-0d0d-4971-bc6a-05182ff166ce",
+              "leftValue": "={{ $json['TOTAL SALE'] }}",
+              "rightValue": "SALES SUMMERY",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -5792,
+        528
+      ],
+      "id": "ba880d62-db97-492b-bc84-3f77234cb005",
+      "name": "AVOIDE MERGED CELL"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "61ee8f69-8f55-4894-b475-ce15105120a9",
+              "name": "TOTAL SALE",
+              "value": "={{ $json['TOTAL SALE'] }}",
+              "type": "number"
+            },
+            {
+              "id": "43e88fa9-e4d9-4eeb-8fcd-15de6f9c91e0",
+              "name": "TOTAL TAX",
+              "value": "={{ $json['TOTAL TAX'] }}",
+              "type": "number"
+            },
+            {
+              "id": "f1762d91-c425-4552-be06-b69e66453769",
+              "name": "TOTAL ITEM",
+              "value": "={{ $json['TOTAL ITEM'] }}",
+              "type": "number"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -5568,
+        528
+      ],
+      "id": "dfd448ba-ad13-4953-8ad0-e5392ad852f1",
+      "name": "OBLIGATE DATA"
+    },
+    {
+      "parameters": {
+        "resource": "order",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -5792,
+        720
+      ],
+      "id": "841fca46-d51d-4ff8-b28f-e72d31f1fb9f",
+      "name": "GET ORDERS",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "let totalOrders = 0;\nlet totalRefunds = 0;\nlet uniqueCustomers = new Set();\nlet customerOrderCount = {};\nlet productSales = {};\nconst orders = $input.all();\ntotalOrders = orders.length;\nfor (const item of orders) {\n  const order = item.json;\n  if (order.refunds && Array.isArray(order.refunds) && order.refunds.length > 0) {\n    for (const refund of order.refunds) {\n      totalRefunds += Math.abs(parseFloat(refund.total));\n    }\n  }\n  const custId = order.customer_id;\n  uniqueCustomers.add(custId);\n  if (!customerOrderCount[custId]) {\n    customerOrderCount[custId] = 0;\n  }\n  customerOrderCount[custId]++;\n  if (order.line_items && Array.isArray(order.line_items)) {\n    for (const line of order.line_items) {\n      const pName = line.name;\n      const qty = parseInt(line.quantity, 10);\n      if (!productSales[pName]) {\n        productSales[pName] = 0;\n      }\n      productSales[pName] += qty;\n    }\n  }\n}\nlet newCustomersCount = 0;\nlet returningCustomersCount = 0;\nfor (const custId in customerOrderCount) {\n  if (customerOrderCount[custId] === 1) {\n    newCustomersCount++;\n  } else {\n    returningCustomersCount++;\n  }\n}\nlet bestSeller = \"No sales yet\";\nlet maxQty = 0;\nfor (const [name, qty] of Object.entries(productSales)) {\n  if (qty > maxQty) {\n    maxQty = qty;\n    bestSeller = name;\n  }\n}\nconst today = new Date();\nconst year = today.getFullYear();\nconst month = String(today.getMonth() + 1).padStart(2, '0');\nconst day = String(today.getDate()).padStart(2, '0');\nconst reportDate = `${year}-${month}-${day}`;\nreturn [\n  {\n    json: {\n      date: reportDate,\n      total_orders: totalOrders,\n      total_refunds: totalRefunds.toFixed(2),\n      total_unique_customers: uniqueCustomers.size,\n      new_customers: newCustomersCount,\n      returning_customers: returningCustomersCount,\n      best_selling_product: bestSeller\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -5568,
+        720
+      ],
+      "id": "60e8d4f4-a535-4956-9594-eea8ea30ddc4",
+      "name": "OBLIGATE DATA1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -5344,
+        624
+      ],
+      "id": "08751257-cdd2-4061-8ddd-b9752efe8ce2",
+      "name": "MERGE"
+    },
+    {
+      "parameters": {
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "TOTAL SALE"
+            },
+            {
+              "fieldToAggregate": "TOTAL TAX"
+            },
+            {
+              "fieldToAggregate": "TOTAL ITEM"
+            },
+            {
+              "fieldToAggregate": "date"
+            },
+            {
+              "fieldToAggregate": "total_orders"
+            },
+            {
+              "fieldToAggregate": "total_refunds"
+            },
+            {
+              "fieldToAggregate": "new_customers"
+            },
+            {
+              "fieldToAggregate": "returning_customers"
+            },
+            {
+              "fieldToAggregate": "best_selling_product"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -5344,
+        848
+      ],
+      "id": "39c9011c-97c7-4ac4-908b-43edef6fc4a6",
+      "name": "AGGREGATE"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ff8bdfa6-9d65-47f4-8ebf-d5f03774005b",
+              "name": "TOTAL ORDER",
+              "value": "={{ $json.total_orders[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "c1d2917e-a978-4d90-b3be-b22406bd9dac",
+              "name": "TOTAL SALE",
+              "value": "={{ $json['TOTAL SALE'][0] }}",
+              "type": "string"
+            },
+            {
+              "id": "ca085ef0-0948-4a5a-87fb-a26b9a05e133",
+              "name": "TOTAL TAX",
+              "value": "={{ $json['TOTAL TAX'][0] }}",
+              "type": "string"
+            },
+            {
+              "id": "3a82379d-1956-4982-9bba-15c0991497c2",
+              "name": "BEST SELLING PRODUCT",
+              "value": "={{ $json.best_selling_product[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "83784411-bf3c-4354-8c4e-6e2dbd03e3cf",
+              "name": "TOTAL REFUND",
+              "value": "={{ $json.total_refunds[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "8e33fbee-1215-4237-83a0-d430a742743f",
+              "name": "NEW CUSTOMERS",
+              "value": "={{ $json.new_customers[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "2a7ce5fe-38d2-4749-9f4f-378d41a95767",
+              "name": "RETURNING CUSTOMERS",
+              "value": "={{ $json.returning_customers[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "25fa88c0-1a23-4e09-8c4b-0f935a76719c",
+              "name": "LINK TO INVOICES",
+              "value": "https://dev-novawoo.pantheonsite.io/wp-admin/admin.php?page=wc-orders",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4896,
+        624
+      ],
+      "id": "1f6f2819-fe94-4331-abd1-9affe86167ee",
+      "name": "OBLIGATE DATA2"
+    },
+    {
+      "parameters": {
+        "sendTo": "www.mosaddik321@gmail.com",
+        "subject": "=📊 NovaStore Daily Sales Report - {{ new Date().toLocaleDateString() }}",
+        "message": "=<!DOCTYPE html> <html lang=\"en\"> <head>   <meta charset=\"UTF-8\">   <style>     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; margin: 0; padding: 40px; background-color: #f9f9f9; }     .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 40px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.05); border-top: 6px solid #4A90E2; }     .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; border-bottom: 1px solid #eee; padding-bottom: 20px; }     .shop-name { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0; }     .report-title { font-size: 24px; color: #7f8c8d; margin: 0; text-transform: uppercase; letter-spacing: 2px; }     .report-date { margin-top: 10px; font-size: 14px; color: #555; }          .metric-grid { display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 30px; }     .metric-card { flex: 1; min-width: 200px; background: #f8f9fa; padding: 20px; border-radius: 8px; text-align: center; border-left: 4px solid #4A90E2; }     .metric-value { font-size: 28px; font-weight: bold; color: #2c3e50; margin: 10px 0 5px 0; }     .metric-label { font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }          .highlight-box { background: #eef6fc; border: 1px solid #d0e3f5; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 30px; }     .highlight-title { font-size: 14px; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 10px 0; }     .highlight-value { font-size: 20px; font-weight: bold; color: #4A90E2; margin: 0; }          .btn { display: inline-block; padding: 12px 25px; background-color: #4A90E2; color: #fff; text-decoration: none; border-radius: 5px; font-weight: bold; margin-top: 10px; }          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }   </style> </head> <body>   <div class=\"container\">          <!-- Header Section -->     <div class=\"header\">       <div>         <h1 class=\"shop-name\">NovaStore</h1>         <p class=\"report-date\"><strong>Report Generated:</strong> {{ new Date().toLocaleString() }}</p>       </div>       <div style=\"text-align: right;\">         <h2 class=\"report-title\">Sales Report</h2>       </div>     </div>      <!-- Metric Cards Grid -->     <div class=\"metric-grid\">       <div class=\"metric-card\">         <div class=\"metric-label\">Total Orders</div>         <div class=\"metric-value\">{{$json[\"TOTAL ORDER\"]}}</div>       </div>       <div class=\"metric-card\">         <div class=\"metric-label\">Total Sales</div>         <div class=\"metric-value\">{{$json[\"TOTAL SALE\"]}} BDT</div>       </div>       <div class=\"metric-card\">         <div class=\"metric-label\">Total Tax Collected</div>         <div class=\"metric-value\">{{$json[\"TOTAL TAX\"]}} BDT</div>       </div>     </div>      <div class=\"metric-grid\">       <div class=\"metric-card\" style=\"border-left-color: #2ecc71;\">         <div class=\"metric-label\">New Customers</div>         <div class=\"metric-value\">{{$json[\"NEW CUSTOMERS\"]}}</div>       </div>       <div class=\"metric-card\" style=\"border-left-color: #f39c12;\">         <div class=\"metric-label\">Returning Customers</div>         <div class=\"metric-value\">{{$json[\"RETURNING CUSTOMERS\"]}}</div>       </div>       <div class=\"metric-card\" style=\"border-left-color: #e74c3c;\">         <div class=\"metric-label\">Total Refunds</div>         <div class=\"metric-value\">{{$json[\"TOTAL REFUND\"]}} BDT</div>       </div>     </div>      <!-- Best Selling Highlight -->     <div class=\"highlight-box\">       <p class=\"highlight-title\">🏆 Best Selling Product</p>       <p class=\"highlight-value\">{{$json[\"BEST SELLING PRODUCT\"]}}</p>     </div>      <!-- Invoices Link Section -->     <div style=\"text-align: center; margin-top: 30px;\">       <p style=\"margin-bottom: 10px; font-size: 16px; color: #555;\">Need to review the transactions?</p>       <a href=\"{{$json['LINK TO INVOICES']}}\" class=\"btn\" target=\"_blank\">View All Invoices</a>     </div>      <!-- Footer -->     <div class=\"footer\">       <p>This is an automated sales report generated by NovaStore Automation System.</p>       <p>Please do not reply directly to this email.</p>     </div>    </div> </body> </html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        -4896,
+        848
+      ],
+      "id": "c542e48a-a74c-46a9-9a93-ede310e60958",
+      "name": "DAILY REPORT SENT TO ADMIN",
+      "webhookId": "c985d762-6868-4612-ab89-cc148b7f3ada",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "Qix6qoyJkHPH0uNI",
+          "name": "Gmail account 710"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE",
+          "mode": "list",
+          "cachedResultName": "WOO COMMERCE",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 787817935,
+          "mode": "list",
+          "cachedResultName": "products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16QFmN7uVVi4YxluUbv4ALzM9B9F_n2VDqKC9YLJf8iE/edit#gid=787817935"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "SKU",
+              "lookupValue": "={{ $json.keys.SKU }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -5696,
+        -336
+      ],
+      "id": "3c1833e0-9414-4379-8773-d37e762cbac0",
+      "name": "GET PRODUCTS5",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DLMnRyMYRgBA6v1f",
+          "name": "Google Sheets account 757"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "sku": "={{ $json.SKU }}"
+        }
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -5472,
+        -336
+      ],
+      "id": "fdb5f8e5-7937-42e2-b37b-82eec4950dfe",
+      "name": "GET PRODUCT ID",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -5248,
+        -336
+      ],
+      "id": "4b7c6c57-3b86-4d3f-a25c-deba6b68ab0a",
+      "name": "LOOP"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "81a2d3cc-8b62-4816-abf8-d0e8ecb40521",
+              "name": "Sale Price",
+              "value": "={{ $('GET PRODUCTS5').item.json['Sale Price'] }}",
+              "type": "string"
+            },
+            {
+              "id": "e571d14e-45fe-4cad-973f-6629cd00109a",
+              "name": "Regular Price",
+              "value": "={{ $('GET PRODUCTS5').item.json['Regular Price'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -4960,
+        -320
+      ],
+      "id": "a6cd5a18-9eac-43ac-97ef-59ba12d65cba",
+      "name": "STRING CONVERT"
+    },
+    {
+      "parameters": {
+        "resource": "product",
+        "operation": "update",
+        "productId": "={{ $('LOOP').item.json.id }}",
+        "updateFields": {
+          "description": "={{ $('GET PRODUCTS5').item.json.Description }}",
+          "regularPrice": "={{ $json['Regular Price'] }}",
+          "salePrice": "={{ $json['Sale Price'] }}"
+        },
+        "dimensionsUi": {},
+        "imagesUi": {},
+        "metadataUi": {}
+      },
+      "type": "n8n-nodes-base.wooCommerce",
+      "typeVersion": 1,
+      "position": [
+        -4672,
+        -320
+      ],
+      "id": "d38b20d8-cdd4-43fd-bbd1-69970f30a2f1",
+      "name": "UPDATE PRODUCT",
+      "credentials": {
+        "wooCommerceApi": {
+          "id": "uICGFTklp41Lt1XK",
+          "name": "pantheon"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": " ORDER & INVOICE AUTOMATION (WooCommerce → Email)\n\nTriggers automatically when a new order is placed.\n\n- Calculate new stock over order quantity.\n- Generates PDF invoices.\n- Sends automated invoice emails to customers.\n- Updates stock levels based on order quantities.",
+        "height": 1008,
+        "width": 2064,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -4160,
+        -832
+      ],
+      "typeVersion": 1,
+      "id": "0bd1cb2f-2043-450b-a2f1-97f547666ba8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "#  PRODUCT HANDLE AUTOMATION\n\nSync Google Sheet data with WooCommerce automatically.\n\n-  **Reads** product list from Google Sheet automatically.\n-  **Creates** new WP products.\n-  **Updates** existing products.\n-  **Deletes** products no longer in the sheet.\n- Generate new enhanced description and retrive product photo from cloudinary.",
+        "height": 1024,
+        "width": 2528,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -6736,
+        -848
+      ],
+      "typeVersion": 1,
+      "id": "7503ac33-4adb-4aa0-8852-31d287d9bab1",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": " DAILY SALES REPORT GENERATOR\n\nAutomated email report sent to the admin every morning.\n- Aggregates daily orders.\n- Calculates total sales, taxes, and item counts.\n- Delivers a structured summary directly to the admin inbox.\n- Best selling product.\n- New vs returning customers.\n- Total refunds.\n- Link to all invoices.",
+        "height": 944,
+        "width": 2528,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -6736,
+        224
+      ],
+      "typeVersion": 1,
+      "id": "60c2b8ea-0c3a-43cb-86a1-4ecd9eaa8b47",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": " AI-POWERED INVOICE SUMMARIZER\n\nAutomated invoice processing pipeline:\n- Fetches outgoing invoice emails (PDFs) via Gmail.\n- Extracts text content from PDF attachments.\n- Filters out previously processed invoices.\n- Uses OpenAI or Gemini to generate a structured summary.\n- Appends invoices to the Google Sheet.\n- Calculate total sales, total taxes and total sold in sheet",
+        "height": 944,
+        "width": 2064,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -4160,
+        224
+      ],
+      "typeVersion": 1,
+      "id": "30742cbb-3bc5-4675-8450-efe4efc87de9",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -6640,
+        -352
+      ],
+      "id": "153124d1-e160-4c51-905b-df804b2c708c",
+      "name": "TRIGGER EVERY HOUR1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "SUMMERY GENERATOR",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ORDER PLACED TRIGGER": {
+      "main": [
+        [
+          {
+            "node": "GMAIL TEMPLATE",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "SKU AND ORDER QUANTITY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GMAIL TEMPLATE": {
+      "main": [
+        [
+          {
+            "node": "HTML TO PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTML TO PDF": {
+      "main": [
+        [
+          {
+            "node": "INVOICE SENT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKU AND ORDER QUANTITY": {
+      "main": [
+        [
+          {
+            "node": "GET PRODUCTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS": {
+      "main": [
+        [
+          {
+            "node": "CALCULATE NEW QUANTITY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CALCULATE NEW QUANTITY": {
+      "main": [
+        [
+          {
+            "node": "STOCK OUT OR NOT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STOCK OUT OR NOT": {
+      "main": [
+        [
+          {
+            "node": "UPDATE TO STOCK OUT",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "UPDATE TO STOCK OUT1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "UPDATE QUANTITY",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "UPDATE QUANTITY1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS1": {
+      "main": [
+        [
+          {
+            "node": "SKU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS2": {
+      "main": [
+        [
+          {
+            "node": "SKU1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKU": {
+      "main": [
+        [
+          {
+            "node": "COMPARE PRODUCTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SKU1": {
+      "main": [
+        [
+          {
+            "node": "COMPARE PRODUCTS",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "COMPARE PRODUCTS": {
+      "main": [
+        [
+          {
+            "node": "GET PRODUCTS4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "GET PRODUCTS5",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GET PRODUCTS3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS3": {
+      "main": [
+        [
+          {
+            "node": "FILTER UNAVAILABE PRODUCTS DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FILTER UNAVAILABE PRODUCTS DATA": {
+      "main": [
+        [
+          {
+            "node": "DELET UNAVAILABLE PRODUCTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS4": {
+      "main": [
+        [
+          {
+            "node": "FILTER MATCHING SKU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FILTER MATCHING SKU": {
+      "main": [
+        [
+          {
+            "node": "NECCESSARY DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NECCESSARY DATA": {
+      "main": [
+        [
+          {
+            "node": "DESCRIPTION ENHANCER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DESCRIPTION ENHANCER": {
+      "main": [
+        [
+          {
+            "node": "GET PRODUCT IMAGE URLS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CREAT PRODUCT": {
+      "main": [
+        []
+      ]
+    },
+    "GET PRODUCT IMAGE URLS": {
+      "main": [
+        [
+          {
+            "node": "CREAT PRODUCT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "COLLECT PRODUCT DETAIL": {
+      "ai_tool": [
+        [
+          {
+            "node": "DESCRIPTION ENHANCER",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TRIGGER EVERY HOUR": {
+      "main": [
+        [
+          {
+            "node": "GET SENT INVOICE THREADS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET SENT INVOICE THREADS": {
+      "main": [
+        [
+          {
+            "node": "EXTRACT INVOICE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EXTRACT INVOICE": {
+      "main": [
+        [
+          {
+            "node": "GET SALES SUMMERY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET SALES SUMMERY": {
+      "main": [
+        [
+          {
+            "node": "FILTER OUT PREVIOUST PROCCESSED INVOICES",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FILTER OUT PREVIOUST PROCCESSED INVOICES": {
+      "main": [
+        [
+          {
+            "node": "SUMMERY GENERATOR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SUMMERY GENERATOR": {
+      "main": [
+        [
+          {
+            "node": "ADD NEW INVOICE SUMMERY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SUMMERY GENERATOR",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SUMMERY GENERATOR",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "TRIGGER EVERYDAY": {
+      "main": [
+        [
+          {
+            "node": "GET SALES SUMMERY1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET SALES SUMMERY1": {
+      "main": [
+        [
+          {
+            "node": "AVOIDE MERGED CELL",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET ORDERS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AVOIDE MERGED CELL": {
+      "main": [
+        [
+          {
+            "node": "OBLIGATE DATA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OBLIGATE DATA": {
+      "main": [
+        [
+          {
+            "node": "MERGE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET ORDERS": {
+      "main": [
+        [
+          {
+            "node": "OBLIGATE DATA1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OBLIGATE DATA1": {
+      "main": [
+        [
+          {
+            "node": "MERGE",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "MERGE": {
+      "main": [
+        [
+          {
+            "node": "AGGREGATE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AGGREGATE": {
+      "main": [
+        [
+          {
+            "node": "OBLIGATE DATA2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OBLIGATE DATA2": {
+      "main": [
+        [
+          {
+            "node": "DAILY REPORT SENT TO ADMIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCTS5": {
+      "main": [
+        [
+          {
+            "node": "GET PRODUCT ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET PRODUCT ID": {
+      "main": [
+        [
+          {
+            "node": "LOOP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LOOP": {
+      "main": [
+        [],
+        [
+          {
+            "node": "STRING CONVERT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "STRING CONVERT": {
+      "main": [
+        [
+          {
+            "node": "UPDATE PRODUCT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE PRODUCT": {
+      "main": [
+        [
+          {
+            "node": "LOOP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TRIGGER EVERY HOUR1": {
+      "main": [
+        [
+          {
+            "node": "GET PRODUCTS1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GET PRODUCTS2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "2bd4a923-5843-4009-9e7b-7489003641b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5f00bba974abf03cb5183d4d65f8a9645a781b04770df6a7d08284fca87d50b3"
+  },
+  "nodeGroups": [],
+  "id": "UfbSBG8JoYlWWQ8y",
+  "tags": []
+}
